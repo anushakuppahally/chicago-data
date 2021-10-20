@@ -1,5 +1,5 @@
 # Databases and SQL for Data Science with Python Final Project
-## Using SQL to analyze 3 datasets: Chicago Socioeconomic Indicators, Chicago Public Schools, and Chicago Crime Data from the Chicago Data Portal. 
+## Used SQL to analyze 3 datasets: Chicago Socioeconomic Indicators, Chicago Public Schools, and Chicago Crime Data from the Chicago Data Portal. 
 
 
 ##### Answered the following 10 questions:

@@ -1,0 +1,118 @@
+#SQL Final Project
+
+import os, types
+import pandas as pd
+from botocore.client import Config
+import ibm_boto3
+
+def __iter__(self): return 0
+
+# @hidden_cell
+# The following code accesses a file in your IBM Cloud Object Storage. It includes your credentials.
+# You might want to remove those credentials before you share the notebook.
+
+if os.environ.get('RUNTIME_ENV_LOCATION_TYPE') == 'external':
+    endpoint_2e1f06cbe27b456499fc38ec81c09e8b = 'https://s3.eu.cloud-object-storage.appdomain.cloud'
+else:
+    endpoint_2e1f06cbe27b456499fc38ec81c09e8b = 'https://s3.private.eu.cloud-object-storage.appdomain.cloud'
+
+client_2e1f06cbe27b456499fc38ec81c09e8b = ibm_boto3.client(service_name='s3',
+    ibm_api_key_id='28g2m1F1kUtflq3ivD4VhaOt11z6G22n9t_KuDCyxclx',
+    ibm_auth_endpoint="https://iam.cloud.ibm.com/oidc/token",
+    config=Config(signature_version='oauth'),
+    endpoint_url=endpoint_2e1f06cbe27b456499fc38ec81c09e8b)
+
+#Importing data
+body = client_2e1f06cbe27b456499fc38ec81c09e8b.get_object(Bucket='finalprojectreal-donotdelete-pr-hz6fqzajb1joke',Key='ChicagoCensusData.csv')['Body']
+# add missing __iter__ method, so pandas accepts body as file-like object
+if not hasattr(body, "__iter__"): body.__iter__ = types.MethodType( __iter__, body )
+
+df_data_1 = pd.read_csv(body)
+df_data_1.head()
+
+body = client_2e1f06cbe27b456499fc38ec81c09e8b.get_object(Bucket='finalprojectreal-donotdelete-pr-hz6fqzajb1joke',Key='ChicagoPublicSchools.csv')['Body']
+# add missing __iter__ method, so pandas accepts body as file-like object
+if not hasattr(body, "__iter__"): body.__iter__ = types.MethodType( __iter__, body )
+
+df_data_2 = pd.read_csv(body)
+df_data_2.head()
+
+body = client_2e1f06cbe27b456499fc38ec81c09e8b.get_object(Bucket='finalprojectreal-donotdelete-pr-hz6fqzajb1joke',Key='ChicagoCrimeData.csv')['Body']
+# add missing __iter__ method, so pandas accepts body as file-like object
+if not hasattr(body, "__iter__"): body.__iter__ = types.MethodType( __iter__, body )
+
+df_data_3 = pd.read_csv(body)
+df_data_3.head()
+
+#Connect to database
+!pip install -U sqlalchemy==1.3.9 
+!pip install -U ibm_db_sa 
+!pip install -U ipython-sql 
+!pip install -U ibm-db 
+import ibm_db
+%load_ext sql
+%sql ibm_db_sa://username:password@54a2f15b-5c0f-46df-8954-7e38e612c2bd.c1ogj3sd0tgtu0lqde00.databases.appdomain.cloud:32733/BLUDB?security=SSL
+
+#Problem 1: Find the total number of crimes recorded in the CRIME table.
+%%sql
+SELECT distinct COUNT(*) AS NUMBER_OF_CRIMES 
+FROM CHICAGO_CRIME_DATA;
+
+#Problem 2: List community areas with per capita income less than 11000.
+%%sql 
+select COMMUNITY_AREA_NAME,PER_CAPITA_INCOME from CENSUS_DATA
+where PER_CAPITA_INCOME < 11000;
+
+#Problem 3: List all case numbers for crimes involving minors?
+%%sql 
+SELECT DISTINCT CASE_NUMBER from CHICAGO_CRIME_DATA 
+where DESCRIPTION like '%MINOR%'
+
+Problem 4: List all kidnapping crimes involving a child (children are not considered minors for the purposes of crime analysis)?
+%%sql 
+SELECT DISTINCT CASE_NUMBER, PRIMARY_TYPE, DESCRIPTION FROM CHICAGO_CRIME_DATA 
+WHERE PRIMARY_TYPE = 'KIDNAPPING'
+
+Problem 5: What kind of crimes were recorded at schools?
+%%sql 
+SELECT DISTINCT(PRIMARY_TYPE) FROM CHICAGO_CRIME_DATA 
+WHERE LOCATION_DESCRIPTION LIKE '%SCHOOL%'
+
+Problem 6: List the average safety score for all types of schools.
+%%sql
+SELECT "Elementary, Middle, or High School",AVG(SAFETY_SCORE) AS AVERAGE_SAFETY_SCORE
+FROM CHICAGO_PUBLIC_SCHOOLS
+GROUP BY "Elementary, Middle, or High School";
+
+Problem 7: List 5 community areas with highest % of households below poverty line.
+%%sql
+SELECT COMMUNITY_AREA_NAME, PERCENT_HOUSEHOLDS_BELOW_POVERTY
+FROM CENSUS_DATA
+ORDER BY PERCENT_HOUSEHOLDS_BELOW_POVERTY DESC
+LIMIT 5;
+
+Problem 8: Which community area(number) is most crime prone?
+%%sql
+SELECT CCD.COMMUNITY_AREA_NUMBER ,COUNT(CCD.COMMUNITY_AREA_NUMBER) AS FREQUENCY
+FROM CHICAGO_CRIME_DATA AS CCD 
+GROUP BY CCD.COMMUNITY_AREA_NUMBER
+ORDER BY COUNT(CCD.COMMUNITY_AREA_NUMBER) DESC
+LIMIT 1;
+
+Problem 9: Use a sub-query to find the name of the community area with highest hardship index.
+%%sql
+SELECT COMMUNITY_AREA_NAME
+FROM  CENSUS_DATA
+WHERE HARDSHIP_INDEX = (SELECT MAX(HARDSHIP_INDEX) FROM CENSUS_DATA);
+
+Problem 10: Use a sub-query to determine the Community Area Name with most number of crimes?
+%%sql
+SELECT community_area_name
+FROM CENSUS_DATA 
+WHERE COMMUNITY_AREA_NUMBER = (    
+    SELECT CCD.COMMUNITY_AREA_NUMBER 
+    FROM CHICAGO_CRIME_DATA AS CCD 
+    GROUP BY CCD.COMMUNITY_AREA_NUMBER
+    ORDER BY COUNT(CCD.COMMUNITY_AREA_NUMBER) DESC
+    LIMIT 1)
+LIMIT 1;
